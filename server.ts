@@ -22,6 +22,7 @@ async function startServer() {
     goalReached: 0,
     lastUpdate: new Date().toISOString(),
     lastEvent: 'Aguardando primeiro evento...',
+    recentEvents: [] as any[],
     hourlyData: Array.from({ length: 12 }, (_, i) => ({ hour: `${i + 8}h`, calls: 0 })) // 8h to 19h
   };
 
@@ -48,6 +49,10 @@ async function startServer() {
 
     // Update stats based on 3C Plus specific events
     stats3c.lastEvent = event;
+    stats3c.lastUpdate = new Date().toISOString();
+    
+    // Keep last 5 events
+    stats3c.recentEvents = [{ event, timestamp: new Date().toISOString() }, ...stats3c.recentEvents].slice(0, 5);
     
     if (event === "call-history-was-created") {
       // A call was finished and added to history

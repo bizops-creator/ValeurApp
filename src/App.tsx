@@ -373,68 +373,99 @@ function Dashboard({ onStartAnalysis }: { onStartAnalysis: () => void, key?: str
 
         {/* Performance Chart Section */}
         <div className="bento-item col-span-4 row-span-2 bg-black/40 border-white/5">
-          <div className="flex justify-between items-center mb-8">
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <BarChart3 className="text-valeur-green" size={20} />
-                Performance 3C Plus
-              </h3>
-              <p className="text-[10px] text-valeur-gray font-medium uppercase tracking-widest">Calls finalizadas por hora</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-valeur-green rounded-full" />
-                <span className="text-[10px] text-white font-bold uppercase tracking-widest">Hoje</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="flex justify-between items-center">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <BarChart3 className="text-valeur-green" size={20} />
+                    Performance 3C Plus
+                  </h3>
+                  <p className="text-[10px] text-valeur-gray font-medium uppercase tracking-widest">Calls finalizadas por hora</p>
+                </div>
+              </div>
+              
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats?.hourlyData || []}>
+                    <defs>
+                      <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00FF00" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#00FF00" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                    <XAxis 
+                      dataKey="hour" 
+                      stroke="#8E9299" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{ fill: '#8E9299' }}
+                    />
+                    <YAxis 
+                      stroke="#8E9299" 
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{ fill: '#8E9299' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#050505', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        color: '#fff'
+                      }}
+                      itemStyle={{ color: '#00FF00' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="calls" 
+                      stroke="#00FF00" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorCalls)" 
+                      animationDuration={1500}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          </div>
-          
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats?.hourlyData || []}>
-                <defs>
-                  <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00FF00" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00FF00" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                <XAxis 
-                  dataKey="hour" 
-                  stroke="#8E9299" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{ fill: '#8E9299' }}
-                />
-                <YAxis 
-                  stroke="#8E9299" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tick={{ fill: '#8E9299' }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#050505', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                  itemStyle={{ color: '#00FF00' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="calls" 
-                  stroke="#00FF00" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorCalls)" 
-                  animationDuration={1500}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+
+            <div className="lg:col-span-1 border-l border-white/5 pl-8 space-y-6">
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Activity size={14} className="text-valeur-green" />
+                  Log de Eventos
+                </h4>
+                <p className="text-[10px] text-valeur-gray font-medium">Últimas 5 atividades do Webhook</p>
+              </div>
+
+              <div className="space-y-3">
+                {stats?.recentEvents?.length > 0 ? (
+                  stats.recentEvents.map((ev: any, i: number) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-1"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-valeur-green uppercase tracking-tighter">{ev.event}</span>
+                        <span className="text-[8px] text-valeur-gray">{new Date(ev.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="h-40 flex flex-col items-center justify-center text-center space-y-2 opacity-30">
+                    <Clock size={24} className="text-valeur-gray" />
+                    <span className="text-[10px] font-bold text-valeur-gray uppercase tracking-widest">Aguardando dados...</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
