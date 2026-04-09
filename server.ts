@@ -19,6 +19,7 @@ async function startServer() {
   let stats3c = {
     callsToday: 0,
     activeCalls: 0,
+    dailyGoal: 150,
     goalReached: 0,
     lastUpdate: new Date().toISOString(),
     lastEvent: 'Aguardando primeiro evento...',
@@ -39,6 +40,17 @@ async function startServer() {
   // API Routes
   app.get("/api/3c/stats", (req, res) => {
     res.json(stats3c);
+  });
+
+  app.post("/api/3c/goal", (req, res) => {
+    const { goal } = req.body;
+    if (typeof goal === 'number' && goal > 0) {
+      stats3c.dailyGoal = goal;
+      stats3c.goalReached = Math.min(100, Math.floor((stats3c.callsToday / stats3c.dailyGoal) * 100));
+      res.json({ status: "success", dailyGoal: stats3c.dailyGoal });
+    } else {
+      res.status(400).json({ error: "Invalid goal value" });
+    }
   });
 
   // Webhook endpoint for 3C Plus
@@ -75,8 +87,8 @@ async function startServer() {
       stats3c.lastUpdate = new Date().toISOString();
     }
 
-    // Recalculate goal percentage (assuming 150 is the daily goal)
-    stats3c.goalReached = Math.min(100, Math.floor((stats3c.callsToday / 150) * 100));
+    // Recalculate goal percentage
+    stats3c.goalReached = Math.min(100, Math.floor((stats3c.callsToday / stats3c.dailyGoal) * 100));
 
     res.status(200).json({ status: "received" });
   });

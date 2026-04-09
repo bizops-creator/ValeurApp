@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   LayoutDashboard, 
   Search, 
@@ -55,25 +55,106 @@ function use3CStats() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch('/api/3c/stats');
-        const data = await res.json();
-        setStats(data);
-      } catch (err) {
-        console.error("Erro ao buscar stats da 3C:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/3c/stats');
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      console.error("Erro ao buscar stats da 3C:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     fetchStats();
     const interval = setInterval(fetchStats, 30000); // Poll every 30s
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStats]);
 
-  return { stats, loading };
+  return { stats, loading, refresh: fetchStats };
+}
+
+function SettingsModal({ isOpen, onClose, currentGoal, onUpdateGoal }: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  currentGoal: number,
+  onUpdateGoal: (newGoal: number) => void 
+}) {
+  const [goal, setGoal] = useState(currentGoal);
+  const [isSaving, setIsSaving] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/3c/goal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: Number(goal) })
+      });
+      if (res.ok) {
+        onUpdateGoal(Number(goal));
+        onClose();
+      }
+    } catch (err) {
+      console.error("Erro ao salvar meta:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-valeur-black/80 backdrop-blur-sm"
+      />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="relative w-full max-w-md bg-valeur-black border border-white/10 rounded-3xl p-8 shadow-2xl"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-black text-white flex items-center gap-2">
+            <Settings className="text-valeur-green" size={20} />
+            Configurações
+          </h2>
+          <button onClick={onClose} className="text-valeur-gray hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Meta Diária de Calls (3C Plus)</label>
+            <div className="relative">
+              <input 
+                type="number" 
+                value={goal}
+                onChange={(e) => setGoal(Number(e.target.value))}
+                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white font-bold focus:outline-none focus:border-valeur-green/50 transition-colors"
+              />
+              <Zap className="absolute right-4 top-1/2 -translate-y-1/2 text-valeur-green/30" size={18} />
+            </div>
+          </div>
+
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full bg-valeur-green text-valeur-black font-black py-4 rounded-xl hover:bg-valeur-green/90 transition-all shadow-[0_0_20px_rgba(0,255,0,0.2)] flex items-center justify-center gap-2"
+          >
+            {isSaving ? "Salvando..." : "Salvar Alterações"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
 }
 
 type Section = 'dashboard' | 'icp-analyzer' | 'call-analysis' | 'knowledge';
@@ -81,10 +162,19 @@ type Section = 'dashboard' | 'icp-analyzer' | 'call-analysis' | 'knowledge';
 export default function App() {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { stats, refresh } = use3CStats();
 
   return (
     <div className="flex h-screen bg-valeur-black overflow-hidden relative">
       <div className="atmosphere" />
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        currentGoal={stats?.dailyGoal || 150}
+        onUpdateGoal={() => refresh()}
+      />
       
       {/* Sidebar */}
       <aside 
@@ -149,8 +239,18 @@ export default function App() {
             </div>
             
             <div className="flex items-center justify-between px-2">
-              <button className="text-valeur-gray hover:text-white transition-colors"><Settings size={18} /></button>
-              <button className="text-valeur-gray hover:text-red-400 transition-colors"><LogOut size={18} /></button>
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="text-valeur-gray hover:text-white transition-colors"
+              >
+                <Settings size={18} />
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-valeur-gray hover:text-red-400 transition-colors"
+              >
+                <LogOut size={18} />
+              </button>
             </div>
           </div>
         )}
@@ -236,7 +336,7 @@ function Dashboard({ onStartAnalysis }: { onStartAnalysis: () => void, key?: str
                 <Zap size={10} className="text-valeur-green" />
                 Meta 3C Plus
               </span>
-              <span className="text-sm font-black text-white">{stats?.callsToday || 0}/150 Calls</span>
+              <span className="text-sm font-black text-white">{stats?.callsToday || 0}/{stats?.dailyGoal || 150} Calls</span>
               <span className="text-[8px] text-valeur-green/50 font-medium uppercase tracking-tighter">
                 {stats?.lastEvent || 'Conectado'}
               </span>
