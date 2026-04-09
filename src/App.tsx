@@ -21,12 +21,60 @@ import {
   Mic,
   Upload,
   Play,
-  FileAudio
+  FileAudio,
+  ShieldCheck,
+  Zap,
+  Info,
+  ArrowRight,
+  TrendingDown,
+  Activity,
+  Award,
+  Clock,
+  Sparkles,
+  BarChart3,
+  MessageSquare,
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 import { cn } from './lib/utils';
 import { analyzeICP, generateDiagnostic, transcribeAndExtract, type CompanyData } from './services/geminiService';
 import { ICP_CRITERIA, METHODOLOGY } from './constants';
+
+// Hook for 3C Plus Stats
+function use3CStats() {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/3c/stats');
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+        console.error("Erro ao buscar stats da 3C:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  return { stats, loading };
+}
 
 type Section = 'dashboard' | 'icp-analyzer' | 'call-analysis' | 'knowledge';
 
@@ -35,47 +83,52 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen bg-valeur-black overflow-hidden">
+    <div className="flex h-screen bg-valeur-black overflow-hidden relative">
+      <div className="atmosphere" />
+      
       {/* Sidebar */}
       <aside 
         className={cn(
-          "bg-black/40 border-r border-white/5 transition-all duration-300 flex flex-col",
-          isSidebarOpen ? "w-64" : "w-20"
+          "bg-black/20 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 flex flex-col z-50",
+          isSidebarOpen ? "w-72" : "w-24"
         )}
       >
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-8 h-8 bg-valeur-green rounded flex items-center justify-center">
-            <span className="text-valeur-black font-bold text-xl">V</span>
+        <div className="p-8 flex items-center gap-4">
+          <div className="w-10 h-10 bg-valeur-green rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(0,255,0,0.4)]">
+            <span className="text-valeur-black font-black text-2xl">V</span>
           </div>
           {isSidebarOpen && (
-            <span className="font-bold text-lg tracking-tight text-white">VALEUR BI</span>
+            <div className="flex flex-col">
+              <span className="font-black text-lg tracking-tighter text-white leading-none">VALEUR</span>
+              <span className="text-[10px] text-valeur-green font-bold tracking-[0.3em] uppercase">Intelligence</span>
+            </div>
           )}
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-2">
+        <nav className="flex-1 px-6 py-8 space-y-3">
           <NavItem 
-            icon={<LayoutDashboard size={20} />} 
+            icon={<LayoutDashboard size={22} />} 
             label="Dashboard" 
             active={activeSection === 'dashboard'} 
             onClick={() => setActiveSection('dashboard')}
             collapsed={!isSidebarOpen}
           />
           <NavItem 
-            icon={<Target size={20} />} 
+            icon={<Target size={22} />} 
             label="Analisador ICP" 
             active={activeSection === 'icp-analyzer'} 
             onClick={() => setActiveSection('icp-analyzer')}
             collapsed={!isSidebarOpen}
           />
           <NavItem 
-            icon={<Mic size={20} />} 
+            icon={<Mic size={22} />} 
             label="Análise de Call" 
             active={activeSection === 'call-analysis'} 
             onClick={() => setActiveSection('call-analysis')}
             collapsed={!isSidebarOpen}
           />
           <NavItem 
-            icon={<BookOpen size={20} />} 
+            icon={<BookOpen size={22} />} 
             label="Metodologia" 
             active={activeSection === 'knowledge'} 
             onClick={() => setActiveSection('knowledge')}
@@ -83,17 +136,36 @@ export default function App() {
           />
         </nav>
 
+        {isSidebarOpen && (
+          <div className="px-6 py-8 border-t border-white/5 space-y-6">
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-valeur-green to-valeur-champagne flex items-center justify-center text-valeur-black font-bold">
+                BV
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-white">BizOps Valeur</span>
+                <span className="text-[10px] text-valeur-gray">Nível 4 • Hunter</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between px-2">
+              <button className="text-valeur-gray hover:text-white transition-colors"><Settings size={18} /></button>
+              <button className="text-valeur-gray hover:text-red-400 transition-colors"><LogOut size={18} /></button>
+            </div>
+          </div>
+        )}
+
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-6 text-valeur-gray hover:text-white transition-colors flex justify-center"
+          className="p-8 text-valeur-gray hover:text-white transition-colors flex justify-center border-t border-white/5"
         >
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative">
-        <div className="max-w-6xl mx-auto p-8 pt-12">
+      <main className="flex-1 overflow-y-auto relative z-10">
+        <div className="max-w-7xl mx-auto p-10 pt-16">
           <AnimatePresence mode="wait">
             {activeSection === 'dashboard' && <Dashboard key="dashboard" onStartAnalysis={() => setActiveSection('icp-analyzer')} />}
             {activeSection === 'icp-analyzer' && <ICPAnalyzer key="icp" />}
@@ -134,72 +206,252 @@ function NavItem({ icon, label, active, onClick, collapsed }: { icon: React.Reac
 }
 
 function Dashboard({ onStartAnalysis }: { onStartAnalysis: () => void, key?: string }) {
+  const { stats, loading: statsLoading } = use3CStats();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="space-y-12"
+      className="space-y-10"
     >
-      <header className="space-y-4">
-        <h1 className="text-5xl font-bold tracking-tight text-white">
-          Bem-vindo à <span className="text-valeur-green">Valeur BI</span>
-        </h1>
-        <p className="text-xl text-valeur-gray max-w-2xl leading-relaxed">
-          Sua central de inteligência comercial. Analise leads, gere diagnósticos e domine a metodologia que escala operações B2B.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-valeur-green text-[10px] font-black uppercase tracking-[0.3em]">
+            <Sparkles size={14} />
+            Sua Central de Inteligência
+          </div>
+          <h1 className="text-6xl font-black tracking-tighter text-white leading-none">
+            Olá, <span className="text-valeur-green">Hunter.</span>
+          </h1>
+          <p className="text-lg text-valeur-gray max-w-xl font-medium">
+            Pronto para qualificar os melhores prospects do dia?
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="glass-panel px-6 py-3 flex items-center gap-4 border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-1 h-full bg-valeur-green animate-pulse" />
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-valeur-gray font-bold uppercase tracking-widest flex items-center gap-1">
+                <Zap size={10} className="text-valeur-green" />
+                Meta 3C Plus
+              </span>
+              <span className="text-sm font-black text-white">{stats?.callsToday || 0}/150 Calls</span>
+              <span className="text-[8px] text-valeur-green/50 font-medium uppercase tracking-tighter">
+                {stats?.lastEvent || 'Conectado'}
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-full border-2 border-valeur-green/30 flex items-center justify-center text-[10px] font-black text-valeur-green relative">
+              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  fill="transparent"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray={113}
+                  strokeDashoffset={113 - (113 * (stats?.goalReached || 0)) / 100}
+                  className="text-valeur-green transition-all duration-1000"
+                />
+              </svg>
+              {stats?.goalReached || 0}%
+            </div>
+          </div>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          title="Leads Analisados" 
-          value="128" 
-          trend="+12% este mês" 
-          icon={<Users className="text-valeur-green" />} 
-        />
-        <StatCard 
-          title="Taxa de ICP" 
-          value="64%" 
-          trend="Estável" 
-          icon={<Target className="text-valeur-champagne" />} 
-        />
-        <StatCard 
-          title="Diagnósticos Gerados" 
-          value="42" 
-          trend="+5 novos" 
-          icon={<FileText className="text-valeur-beige" />} 
-        />
-      </div>
+      <div className="bento-grid">
+        {/* Main Action Card */}
+        <div className="bento-item col-span-2 row-span-2 bg-gradient-to-br from-valeur-green/20 to-transparent border-valeur-green/30 group">
+          <div className="space-y-4 relative z-10">
+            <div className="w-12 h-12 bg-valeur-green rounded-2xl flex items-center justify-center text-valeur-black shadow-lg group-hover:scale-110 transition-transform duration-500">
+              <Target size={24} />
+            </div>
+            <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
+              Analisador de ICP <br/> Inteligente
+            </h2>
+            <p className="text-valeur-gray text-sm max-w-xs font-medium">
+              Use nossa IA treinada na metodologia Valeur para qualificar leads em segundos.
+            </p>
+          </div>
+          <button onClick={onStartAnalysis} className="btn-primary w-full relative z-10">
+            Nova Análise
+          </button>
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-valeur-green/10 rounded-full blur-3xl group-hover:bg-valeur-green/20 transition-colors duration-500" />
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="glass-panel p-8 space-y-6 neon-border">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <TrendingUp className="text-valeur-green" />
-            Ação Rápida
-          </h2>
-          <p className="text-valeur-gray">
-            Comece agora analisando um novo prospect para verificar se ele se encaixa no Perfil de Cliente Ideal da Valeur.
-          </p>
-          <button onClick={onStartAnalysis} className="btn-primary w-full">
-            Iniciar Nova Análise
+        {/* Stats Cards */}
+        <div className="bento-item col-span-1 row-span-1 group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 bg-white/5 rounded-lg group-hover:bg-valeur-green/10 transition-colors">
+              <Users className="text-valeur-green" size={20} />
+            </div>
+            <span className="text-[10px] font-black text-valeur-green">+12%</span>
+          </div>
+          <div>
+            <div className="text-3xl font-black text-white">128</div>
+            <div className="text-[10px] font-bold text-valeur-gray uppercase tracking-widest">Leads Totais</div>
+          </div>
+        </div>
+
+        <div className="bento-item col-span-1 row-span-1 group">
+          <div className="flex justify-between items-start">
+            <div className="p-2 bg-white/5 rounded-lg group-hover:bg-valeur-champagne/10 transition-colors">
+              <Activity className="text-valeur-champagne" size={20} />
+            </div>
+            <span className="text-[10px] font-black text-valeur-gray uppercase tracking-widest flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-valeur-green rounded-full animate-pulse" />
+              Live
+            </span>
+          </div>
+          <div>
+            <div className="text-3xl font-black text-white">{stats?.activeCalls || 0}</div>
+            <div className="text-[10px] font-bold text-valeur-gray uppercase tracking-widest">Calls Ativas (3C)</div>
+          </div>
+        </div>
+
+        {/* Diagnostic Card */}
+        <div className="bento-item col-span-2 row-span-1 flex-row items-center gap-6 group">
+          <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center shrink-0 group-hover:bg-white/10 transition-colors">
+            <FileText className="text-valeur-beige" size={32} />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-white">Diagnósticos</h3>
+            <p className="text-xs text-valeur-gray font-medium">42 relatórios gerados com a metodologia Valeur.</p>
+            <div className="flex gap-1 mt-2">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="h-1 w-8 bg-valeur-green/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-valeur-green w-3/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Methodology Quick View */}
+        <div className="bento-item col-span-2 row-span-2 bg-black/40">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Award className="text-valeur-champagne" size={20} />
+                Pilares Valeur
+              </h3>
+              <button className="text-[10px] font-black text-valeur-gray hover:text-white uppercase tracking-widest transition-colors">Ver Todos</button>
+            </div>
+            <div className="space-y-4">
+              {METHODOLOGY.pillars.slice(0, 3).map((pillar, i) => (
+                <div key={i} className="flex gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-xs font-black text-valeur-champagne group-hover:bg-valeur-champagne group-hover:text-valeur-black transition-all">
+                    0{i + 1}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{pillar.name}</h4>
+                    <p className="text-[10px] text-valeur-gray font-medium line-clamp-1">{pillar.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bento-item col-span-2 row-span-1 flex-row items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-valeur-green/10 rounded-full flex items-center justify-center">
+              <Mic className="text-valeur-green" size={20} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white">Última Call Analisada</div>
+              <div className="text-[10px] text-valeur-gray font-medium">Empresa Solar Tech • Há 2 horas</div>
+            </div>
+          </div>
+          <button className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+            <ChevronRight size={18} />
           </button>
         </div>
 
-        <div className="glass-panel p-8 space-y-6">
-          <h3 className="text-xl font-bold text-white">Metodologia Valeur</h3>
-          <ul className="space-y-4">
-            {METHODOLOGY.pillars.map((pillar, i) => (
-              <li key={i} className="flex gap-4">
-                <div className="mt-1 w-5 h-5 rounded-full border border-valeur-green flex items-center justify-center text-[10px] font-bold text-valeur-green">
-                  {i + 1}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-valeur-beige">{pillar.name}</h4>
-                  <p className="text-sm text-valeur-gray">{pillar.description}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+        {/* Performance Chart Section */}
+        <div className="bento-item col-span-4 row-span-2 bg-black/40 border-white/5">
+          <div className="flex justify-between items-center mb-8">
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <BarChart3 className="text-valeur-green" size={20} />
+                Performance 3C Plus
+              </h3>
+              <p className="text-[10px] text-valeur-gray font-medium uppercase tracking-widest">Calls finalizadas por hora</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-valeur-green rounded-full" />
+                <span className="text-[10px] text-white font-bold uppercase tracking-widest">Hoje</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats?.hourlyData || []}>
+                <defs>
+                  <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00FF00" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#00FF00" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                <XAxis 
+                  dataKey="hour" 
+                  stroke="#8E9299" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false}
+                  tick={{ fill: '#8E9299' }}
+                />
+                <YAxis 
+                  stroke="#8E9299" 
+                  fontSize={10} 
+                  tickLine={false} 
+                  axisLine={false}
+                  tick={{ fill: '#8E9299' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#050505', 
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff'
+                  }}
+                  itemStyle={{ color: '#00FF00' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="calls" 
+                  stroke="#00FF00" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorCalls)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Insights */}
+        <div className="bento-item col-span-2 row-span-1 flex-row items-center gap-6 group">
+          <div className="w-16 h-16 bg-valeur-green/5 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-valeur-green/10 transition-colors">
+            <Sparkles className="text-valeur-green" size={24} />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">Insight do Dia</h3>
+            <p className="text-sm text-valeur-beige leading-snug font-medium">
+              "Empresas com mais de 5 SDRs no segmento de Tecnologia têm 40% mais chance de fechar com a Valeur."
+            </p>
+          </div>
+          <div className="text-[10px] font-black text-valeur-green bg-valeur-green/10 px-3 py-1 rounded-full uppercase tracking-widest">
+            IA Insight
+          </div>
         </div>
       </div>
     </motion.div>
@@ -261,101 +513,156 @@ function ICPAnalyzer() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-8"
+      className="space-y-10"
     >
-      <header>
-        <h2 className="text-3xl font-bold text-white">Analisador de ICP</h2>
-        <p className="text-valeur-gray">Verifique se o prospect atende aos critérios de qualificação da Valeur.</p>
+      <header className="space-y-2">
+        <div className="flex items-center gap-2 text-valeur-green text-[10px] font-black uppercase tracking-[0.3em]">
+          <Target size={14} />
+          Qualificação de Leads
+        </div>
+        <h2 className="text-5xl font-black text-white tracking-tighter">Analisador de ICP</h2>
+        <p className="text-valeur-gray font-medium">Verifique se o prospect atende aos critérios de qualificação da Valeur.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <form onSubmit={handleSubmit} className="glass-panel p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <form onSubmit={handleSubmit} className="lg:col-span-5 glass-panel p-10 space-y-8 neon-border relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-valeur-green/5 rounded-full blur-3xl group-hover:bg-valeur-green/10 transition-colors" />
+          
+          <div className="grid grid-cols-1 gap-6 relative z-10">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Nome da Empresa</label>
+              <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Nome da Empresa</label>
               <input 
                 required
                 type="text" 
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors"
+                placeholder="Ex: Valeur Consultoria"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white placeholder:text-white/20"
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Segmento</label>
-              <select 
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors"
-                value={formData.segment}
-                onChange={e => setFormData({...formData, segment: e.target.value})}
-              >
-                <option value="">Selecione...</option>
-                {ICP_CRITERIA.segments.map(s => <option key={s} value={s}>{s}</option>)}
-                <option value="Outro">Outro</option>
-              </select>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Segmento</label>
+                <select 
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white appearance-none cursor-pointer"
+                  value={formData.segment}
+                  onChange={e => setFormData({...formData, segment: e.target.value})}
+                >
+                  <option value="" className="bg-valeur-black">Selecione...</option>
+                  {ICP_CRITERIA.segments.map(s => <option key={s} value={s} className="bg-valeur-black">{s}</option>)}
+                  <option value="Outro" className="bg-valeur-black">Outro</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Funcionários</label>
+                <input 
+                  required
+                  type="number" 
+                  min="1"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white"
+                  value={formData.employees || ''}
+                  onChange={e => setFormData({...formData, employees: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Nº de Funcionários</label>
-              <input 
-                required
-                type="number" 
-                min="1"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors text-white"
-                value={formData.employees || ''}
-                onChange={e => setFormData({...formData, employees: parseInt(e.target.value) || 0})}
-              />
+              <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Faturamento Anual (R$)</label>
+              <div className="relative">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-valeur-green font-bold text-sm">R$</span>
+                <input 
+                  required
+                  type="number" 
+                  min="1"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-5 py-3 focus:border-valeur-green outline-none transition-all text-white"
+                  value={formData.revenue || ''}
+                  onChange={e => setFormData({...formData, revenue: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Faturamento Anual (R$)</label>
-              <input 
-                required
-                type="number" 
-                min="1"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors text-white"
-                value={formData.revenue || ''}
-                onChange={e => setFormData({...formData, revenue: parseInt(e.target.value) || 0})}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium text-valeur-gray">Cargo do Contato</label>
+              <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Cargo do Contato</label>
               <input 
                 required
                 type="text" 
                 placeholder="Ex: CEO, Diretor Comercial"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors text-white"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white placeholder:text-white/20"
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Nº de SDRs/Pré-vendedores</label>
-              <input 
-                required
-                type="number" 
-                min="0"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors text-white"
-                value={formData.sdrCount || ''}
-                onChange={e => setFormData({...formData, sdrCount: parseInt(e.target.value) || 0})}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-valeur-gray">Nº de Closers/Vendedores</label>
-              <input 
-                required
-                type="number" 
-                min="0"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-valeur-green outline-none transition-colors text-white"
-                value={formData.closerCount || ''}
-                onChange={e => setFormData({...formData, closerCount: parseInt(e.target.value) || 0})}
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">SDRs</label>
+                <input 
+                  required
+                  type="number" 
+                  min="0"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white"
+                  value={formData.sdrCount || ''}
+                  onChange={e => setFormData({...formData, sdrCount: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Closers</label>
+                <input 
+                  required
+                  type="number" 
+                  min="0"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 focus:border-valeur-green outline-none transition-all text-white"
+                  value={formData.closerCount || ''}
+                  onChange={e => setFormData({...formData, closerCount: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
           </div>
-          <button disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
-            Analisar Prospect
+
+          <button disabled={loading} className="btn-primary w-full flex items-center justify-center gap-3 relative z-10">
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <Zap size={20} />}
+            Executar Análise de ICP
           </button>
         </form>
 
-        <AnimatePresence>
+        <div className="lg:col-span-7">
+          <AnimatePresence mode="wait">
+            {!result && !error && !loading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="glass-panel p-16 text-center space-y-6 border-dashed border-white/10"
+              >
+                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto">
+                  <Target className="text-valeur-gray/30" size={40} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white">Aguardando Dados</h3>
+                  <p className="text-sm text-valeur-gray max-w-xs mx-auto">Preencha as informações ao lado para que nossa IA gere o diagnóstico de qualificação.</p>
+                </div>
+              </motion.div>
+            )}
+
+            {loading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="glass-panel p-16 text-center space-y-8"
+              >
+                <div className="relative w-24 h-24 mx-auto">
+                  <div className="absolute inset-0 border-4 border-valeur-green/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-valeur-green rounded-full border-t-transparent animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Target className="text-valeur-green animate-pulse" size={32} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white">Analisando Prospect...</h3>
+                  <p className="text-sm text-valeur-gray">Cruzando dados com a metodologia Valeur.</p>
+                </div>
+              </motion.div>
+            )}
           {error && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -377,70 +684,132 @@ function ICPAnalyzer() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="glass-panel p-8 space-y-8 neon-border"
+              className="glass-panel p-8 space-y-8 neon-border relative overflow-hidden"
             >
-              <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-white">Resultado da Análise</h3>
+              {/* Background decorative element */}
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-valeur-green/5 rounded-full blur-3xl" />
+              
+              <div className="flex justify-between items-center relative z-10">
+                <h3 className="text-2xl font-bold text-white tracking-tight">Análise de Qualificação</h3>
                 <div className={cn(
-                  "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest",
-                  result.isICP ? "bg-valeur-green/20 text-valeur-green" : "bg-red-500/20 text-red-500"
+                  "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg",
+                  result.isICP 
+                    ? "bg-valeur-green/20 text-valeur-green border border-valeur-green/30" 
+                    : "bg-red-500/20 text-red-500 border border-red-500/30"
                 )}>
                   {result.fitLevel} Fit
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90">
+              <div className="flex flex-col md:flex-row items-center gap-8 py-4 relative z-10">
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90 drop-shadow-[0_0_8px_rgba(0,255,0,0.2)]">
                     <circle 
-                      cx="48" cy="48" r="40" 
-                      className="fill-none stroke-white/10 stroke-[8]" 
+                      cx="64" cy="64" r="56" 
+                      className="fill-none stroke-white/5 stroke-[10]" 
                     />
                     <motion.circle 
-                      cx="48" cy="48" r="40" 
-                      className="fill-none stroke-valeur-green stroke-[8]" 
-                      strokeDasharray="251.2"
-                      initial={{ strokeDashoffset: 251.2 }}
-                      animate={{ strokeDashoffset: 251.2 - (251.2 * result.score) / 100 }}
-                      transition={{ duration: 1, ease: "easeOut" }}
+                      cx="64" cy="64" r="56" 
+                      className={cn(
+                        "fill-none stroke-[10] stroke-linecap-round",
+                        result.score >= 70 ? "stroke-valeur-green" : result.score >= 40 ? "stroke-valeur-champagne" : "stroke-red-500"
+                      )}
+                      strokeDasharray="351.85"
+                      initial={{ strokeDashoffset: 351.85 }}
+                      animate={{ strokeDashoffset: 351.85 - (351.85 * result.score) / 100 }}
+                      transition={{ duration: 1.5, ease: "circOut" }}
                     />
                   </svg>
-                  <span className="absolute text-2xl font-bold text-white">{result.score}</span>
+                  <div className="absolute flex flex-col items-center justify-center">
+                    <span className="text-3xl font-black text-white leading-none">{result.score}</span>
+                    <span className="text-[10px] text-valeur-gray font-bold uppercase tracking-tighter">Score</span>
+                  </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <div className="text-lg font-semibold text-valeur-beige">Score de Qualificação</div>
-                  <p className="text-sm text-valeur-gray">Baseado nos critérios de nicho, faturamento e decisores.</p>
+                
+                <div className="flex-1 space-y-3 text-center md:text-left">
+                  <div className="space-y-1">
+                    <div className="text-xl font-bold text-white flex items-center justify-center md:justify-start gap-2">
+                      <Activity size={20} className="text-valeur-green" />
+                      Diagnóstico de Perfil
+                    </div>
+                    <p className="text-sm text-valeur-gray leading-relaxed">
+                      Lead analisado com base em faturamento, estrutura comercial e aderência ao nicho Valeur.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                    <div className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-[10px] font-mono text-valeur-beige">
+                      ICP: {result.isICP ? "SIM" : "NÃO"}
+                    </div>
+                    <div className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-[10px] font-mono text-valeur-beige">
+                      SCORE: {result.score}%
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-valeur-gray uppercase tracking-wider">Por que?</h4>
-                <ul className="space-y-2">
-                  {result.reasons.map((reason: string, i: number) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-valeur-beige">
-                      <CheckCircle2 size={16} className="text-valeur-green mt-0.5 shrink-0" />
-                      {reason}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <div className="grid grid-cols-1 gap-6 relative z-10">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <ShieldCheck size={18} className="text-valeur-green" />
+                    <h4 className="text-xs font-black text-white uppercase tracking-widest">Por que este score?</h4>
+                  </div>
+                  <ul className="grid grid-cols-1 gap-3">
+                    {result.reasons.map((reason: string, i: number) => (
+                      <motion.li 
+                        key={i} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-valeur-green/30 transition-colors group"
+                      >
+                        <div className="mt-0.5 p-1 bg-valeur-green/10 rounded-lg group-hover:bg-valeur-green/20 transition-colors">
+                          {i % 3 === 0 ? <Zap size={14} className="text-valeur-green" /> : 
+                           i % 3 === 1 ? <TrendingUp size={14} className="text-valeur-green" /> : 
+                           <CheckCircle2 size={14} className="text-valeur-green" />}
+                        </div>
+                        <span className="text-sm text-valeur-beige leading-snug">{reason}</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </div>
 
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-valeur-gray uppercase tracking-wider">Recomendações</h4>
-                <ul className="space-y-2">
-                  {result.recommendations.map((rec: string, i: number) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-valeur-gray">
-                      <AlertCircle size={16} className="text-valeur-champagne mt-0.5 shrink-0" />
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+                    <Info size={18} className="text-valeur-champagne" />
+                    <h4 className="text-xs font-black text-white uppercase tracking-widest">Recomendações Estratégicas</h4>
+                  </div>
+                  <ul className="grid grid-cols-1 gap-3">
+                    {result.recommendations.map((rec: string, i: number) => (
+                      <motion.li 
+                        key={i} 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: (i + result.reasons.length) * 0.1 }}
+                        className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-valeur-champagne/30 transition-colors group"
+                      >
+                        <div className="mt-0.5 p-1 bg-valeur-champagne/10 rounded-lg group-hover:bg-valeur-champagne/20 transition-colors">
+                          {i % 2 === 0 ? <ArrowRight size={14} className="text-valeur-champagne" /> : 
+                           <AlertCircle size={14} className="text-valeur-champagne" />}
+                        </div>
+                        <span className="text-sm text-valeur-gray leading-snug">{rec}</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              
+              {/* Technical footer */}
+              <div className="pt-4 border-t border-white/5 flex justify-between items-center text-[9px] font-mono text-valeur-gray uppercase tracking-tighter">
+                <span>Valeur Intelligence Engine v2.4</span>
+                <span>Timestamp: {new Date().toLocaleTimeString()}</span>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
+  </motion.div>
   );
 }
 
@@ -504,84 +873,112 @@ function CallAnalysis() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-8"
+      className="space-y-10"
     >
-      <header>
-        <h2 className="text-3xl font-bold text-white">Análise de Call</h2>
-        <p className="text-valeur-gray">Transcreva e extraia dados de qualificação automaticamente.</p>
+      <header className="space-y-2">
+        <div className="flex items-center gap-2 text-valeur-green text-[10px] font-black uppercase tracking-[0.3em]">
+          <Mic size={14} />
+          Inteligência de Conversação
+        </div>
+        <h2 className="text-5xl font-black text-white tracking-tighter">Análise de Call</h2>
+        <p className="text-valeur-gray font-medium">Extraia dados estratégicos de reuniões comerciais automaticamente.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Audio Upload Section */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="glass-panel p-8 space-y-6">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Mic className="text-valeur-green" size={24} />
-              Upload da Gravação
-            </h3>
-            <p className="text-sm text-valeur-gray">
-              Suba a gravação da call para transcrição automática e preenchimento do formulário de qualificação.
-            </p>
+        {/* Upload Section */}
+        <div className="space-y-6">
+          <div className="glass-panel p-10 space-y-8 neon-border relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-valeur-green/5 rounded-full blur-3xl group-hover:bg-valeur-green/10 transition-colors" />
             
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:border-valeur-green/50 transition-all cursor-pointer group bg-white/5"
-            >
-              <input 
-                type="file" 
-                ref={fileInputRef}
-                onChange={handleAudioUpload}
-                accept="audio/*,video/mp4,video/x-m4v,video/*"
-                className="hidden"
-              />
-              <div className="w-16 h-16 bg-valeur-green/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+            <div className="text-center space-y-4 relative z-10">
+              <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-500">
                 <Upload className="text-valeur-green" size={32} />
               </div>
-              <h4 className="text-white font-bold">Clique para subir</h4>
-              <p className="text-xs text-valeur-gray mt-2">MP3, WAV, M4A, MP4 (Max 25MB)</p>
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-white">Subir Gravação</h3>
+                <p className="text-xs text-valeur-gray font-medium">Formatos aceitos: MP4, MP3, WAV</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              <input 
+                type="file" 
+                accept="audio/*,video/mp4,video/x-m4v,video/*" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={handleAudioUpload}
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={audioLoading}
+                className="btn-primary w-full flex items-center justify-center gap-3"
+              >
+                {audioLoading ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} />}
+                Selecionar Arquivo
+              </button>
             </div>
 
             {audioLoading && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-valeur-gray">
+              <div className="space-y-4 relative z-10">
+                <div className="flex items-center justify-between text-[10px] text-valeur-gray font-black uppercase tracking-widest">
                   <span className="flex items-center gap-2">
-                    <Loader2 className="animate-spin" size={14} />
-                    Analisando call com Gemini 3.1 Pro...
+                    <Loader2 className="animate-spin" size={12} />
+                    Processando...
                   </span>
                   <span>IA em ação</span>
                 </div>
-                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: "0%" }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 30, ease: "linear" }}
-                    className="h-full bg-valeur-green"
+                    className="h-full bg-valeur-green shadow-[0_0_10px_rgba(0,255,0,0.5)]"
                   />
                 </div>
-                <p className="text-[10px] text-valeur-gray italic text-center">
-                  Isso pode levar até 1 minuto dependendo do tamanho do vídeo.
+                <p className="text-[9px] text-valeur-gray italic text-center font-medium">
+                  O Gemini 3.1 Pro está analisando cada detalhe da conversa.
                 </p>
               </div>
             )}
 
             {audioError && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-start gap-2">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] font-bold flex items-start gap-3 relative z-10">
                 <AlertCircle size={16} className="shrink-0" />
                 {audioError}
               </div>
             )}
+          </div>
+
+          {/* Waveform Visualizer Placeholder */}
+          <div className="glass-panel p-6 space-y-4 overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-valeur-gray uppercase tracking-widest">Visualizador de Áudio</span>
+              <Activity size={14} className="text-valeur-green" />
+            </div>
+            <div className="flex items-end gap-1 h-12">
+              {[...Array(30)].map((_, i) => (
+                <motion.div 
+                  key={i}
+                  animate={{ height: audioLoading ? [10, 40, 10] : 10 }}
+                  transition={{ repeat: Infinity, duration: 0.5 + Math.random(), ease: "easeInOut" }}
+                  className="flex-1 bg-valeur-green/30 rounded-full"
+                />
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Audio Results Section */}
         <div className="lg:col-span-2 space-y-6">
           {!audioResult && !audioLoading && (
-            <div className="glass-panel p-12 text-center space-y-4">
-              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
-                <FileAudio className="text-valeur-gray" size={32} />
+            <div className="glass-panel p-20 text-center space-y-6 border-dashed border-white/10 h-full flex flex-col items-center justify-center">
+              <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center">
+                <FileAudio className="text-valeur-gray/20" size={48} />
               </div>
-              <h3 className="text-xl font-bold text-white">Aguardando Gravação</h3>
-              <p className="text-valeur-gray">Suba um arquivo de áudio para ver a transcrição e o formulário preenchido.</p>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-white">Aguardando Call</h3>
+                <p className="text-sm text-valeur-gray max-w-xs mx-auto font-medium">Suba um arquivo para ver a transcrição e o formulário Hunter preenchido automaticamente.</p>
+              </div>
             </div>
           )}
 
@@ -589,46 +986,55 @@ function CallAnalysis() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="space-y-8"
             >
               {/* Summary & Transcription */}
-              <div className="glass-panel p-8 space-y-6">
+              <div className="glass-panel p-10 space-y-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-valeur-green to-transparent opacity-30" />
+                
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-white">Resumo da Call</h3>
-                  <div className="flex items-center gap-2 text-valeur-green text-xs font-mono">
-                    <div className="w-2 h-2 bg-valeur-green rounded-full animate-pulse" />
-                    PROCESSADO POR IA
+                  <h3 className="text-2xl font-black text-white tracking-tight">Resumo Executivo</h3>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-valeur-green/10 rounded-full text-[10px] font-black text-valeur-green uppercase tracking-widest border border-valeur-green/20">
+                    <Sparkles size={12} />
+                    Gemini 3.1 Pro
                   </div>
                 </div>
-                <p className="text-valeur-gray leading-relaxed italic border-l-2 border-valeur-green pl-4">
-                  "{audioResult.summary}"
-                </p>
+                
+                <div className="relative">
+                  <MessageSquare className="absolute -left-2 -top-2 text-valeur-green/10" size={40} />
+                  <p className="text-lg text-valeur-beige leading-relaxed font-medium pl-6 border-l-2 border-valeur-green/30 italic">
+                    {audioResult.summary}
+                  </p>
+                </div>
                 
                 <details className="group">
-                  <summary className="text-sm font-bold text-valeur-green cursor-pointer flex items-center gap-2 list-none">
+                  <summary className="text-xs font-black text-valeur-green cursor-pointer flex items-center gap-2 list-none uppercase tracking-widest hover:opacity-80 transition-opacity">
                     <ChevronRight className="group-open:rotate-90 transition-transform" size={16} />
                     Ver Transcrição Completa
                   </summary>
-                  <div className="mt-4 p-4 bg-black/30 rounded-xl text-sm text-valeur-gray leading-relaxed max-h-60 overflow-y-auto font-mono">
+                  <div className="mt-6 p-6 bg-black/40 rounded-3xl text-xs text-valeur-gray leading-relaxed max-h-80 overflow-y-auto font-mono border border-white/5">
                     {audioResult.transcription}
                   </div>
                 </details>
               </div>
 
               {/* Extracted Form */}
-              <div className="glass-panel p-8 space-y-6">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <FileText className="text-valeur-green" size={24} />
-                  Formulário de Qualificação Extraído
-                </h3>
+              <div className="glass-panel p-10 space-y-10 neon-border">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                    <FileText className="text-valeur-green" size={28} />
+                    Formulário Hunter
+                  </h3>
+                  <button className="btn-secondary">Exportar para Kommo</button>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                   {Object.entries(audioResult.formData).map(([key, value]: [string, any]) => (
-                    <div key={key} className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-widest text-valeur-gray font-bold">
+                    <div key={key} className="space-y-2 group">
+                      <label className="text-[10px] uppercase tracking-[0.2em] text-valeur-gray font-black group-hover:text-valeur-green transition-colors">
                         {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                       </label>
-                      <div className="text-sm text-white bg-white/5 p-2 rounded border border-white/5">
+                      <div className="text-sm text-white bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:border-white/10 transition-all font-medium">
                         {value || "Não identificado"}
                       </div>
                     </div>
